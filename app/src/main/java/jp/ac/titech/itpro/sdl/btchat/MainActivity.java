@@ -56,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private ListView chatLogView;
     private EditText inputText;
     private Button sendButton;
+    private Button ringButton;
 
     private ArrayList<ChatMessage> chatLog;
     private ArrayAdapter<ChatMessage> chatLogAdapter;
@@ -91,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
     private SoundPool soundPool;
     private int sound_connected;
     private int sound_disconnected;
+    private int sound_rings;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
         connectionProgress = findViewById(R.id.connection_progress);
         inputText = findViewById(R.id.input_text);
         sendButton = findViewById(R.id.send_button);
+        ringButton = findViewById(R.id.ring_button);
         chatLogView = findViewById(R.id.chat_log_view);
         chatLogAdapter = new ArrayAdapter<ChatMessage>(this, 0, chatLog) {
             @Override
@@ -153,6 +156,7 @@ public class MainActivity extends AppCompatActivity {
         // https://www.nhk.or.jp/archives/creative/material/view.html?m=D0002070102_00000
         sound_disconnected = soundPool.load(this, R.raw.nhk_woodblock2, 1);
 
+        sound_rings = soundPool.load(this, R.raw.result_rock, 1);
         btAdapter = BluetoothAdapter.getDefaultAdapter();
         if (btAdapter != null)
             setupBT();
@@ -186,33 +190,33 @@ public class MainActivity extends AppCompatActivity {
         MenuItem itemServerStart = menu.findItem(R.id.menu_server_start);
         MenuItem itemServerStop = menu.findItem(R.id.menu_server_stop);
         switch (state) {
-        case Initializing:
-        case Connecting:
-            itemConnect.setVisible(false);
-            itemDisconnect.setVisible(false);
-            itemServerStart.setVisible(false);
-            itemServerStop.setVisible(false);
-            return true;
-        case Disconnected:
-            itemConnect.setVisible(true);
-            itemDisconnect.setVisible(false);
-            itemServerStart.setVisible(true);
-            itemServerStop.setVisible(false);
-            return true;
-        case Connected:
-            itemConnect.setVisible(false);
-            itemDisconnect.setVisible(true);
-            itemServerStart.setVisible(false);
-            itemServerStop.setVisible(false);
-            return true;
-        case Waiting:
-            itemConnect.setVisible(false);
-            itemDisconnect.setVisible(false);
-            itemServerStart.setVisible(false);
-            itemServerStop.setVisible(true);
-            return true;
-        default:
-            return super.onPrepareOptionsMenu(menu);
+            case Initializing:
+            case Connecting:
+                itemConnect.setVisible(false);
+                itemDisconnect.setVisible(false);
+                itemServerStart.setVisible(false);
+                itemServerStop.setVisible(false);
+                return true;
+            case Disconnected:
+                itemConnect.setVisible(true);
+                itemDisconnect.setVisible(false);
+                itemServerStart.setVisible(true);
+                itemServerStop.setVisible(false);
+                return true;
+            case Connected:
+                itemConnect.setVisible(false);
+                itemDisconnect.setVisible(true);
+                itemServerStart.setVisible(false);
+                itemServerStop.setVisible(false);
+                return true;
+            case Waiting:
+                itemConnect.setVisible(false);
+                itemDisconnect.setVisible(false);
+                itemServerStart.setVisible(false);
+                itemServerStop.setVisible(true);
+                return true;
+            default:
+                return super.onPrepareOptionsMenu(menu);
         }
     }
 
@@ -220,30 +224,30 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.d(TAG, "onOptionsItemSelected");
         switch (item.getItemId()) {
-        case R.id.menu_connect:
-            connect();
-            return true;
-        case R.id.menu_disconnect:
-            disconnect();
-            return true;
-        case R.id.menu_server_start:
-            startServer();
-            return true;
-        case R.id.menu_server_stop:
-            stopServer();
-            return true;
-        case R.id.menu_clear:
-            chatLogAdapter.clear();
-            return true;
-        case R.id.menu_about:
-            new AlertDialog.Builder(this)
-                    .setTitle(R.string.about_dialog_title)
-                    .setMessage(R.string.about_dialog_content)
-                    .setPositiveButton(android.R.string.ok, null)
-                    .show();
-            return true;
-        default:
-            return super.onOptionsItemSelected(item);
+            case R.id.menu_connect:
+                connect();
+                return true;
+            case R.id.menu_disconnect:
+                disconnect();
+                return true;
+            case R.id.menu_server_start:
+                startServer();
+                return true;
+            case R.id.menu_server_stop:
+                stopServer();
+                return true;
+            case R.id.menu_clear:
+                chatLogAdapter.clear();
+                return true;
+            case R.id.menu_about:
+                new AlertDialog.Builder(this)
+                        .setTitle(R.string.about_dialog_title)
+                        .setMessage(R.string.about_dialog_content)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
         }
     }
 
@@ -251,26 +255,39 @@ public class MainActivity extends AppCompatActivity {
     public void onActivityResult(int reqCode, int resCode, Intent data) {
         Log.d(TAG, "onActivityResult : reqCode=" + reqCode + " resCode=" + resCode);
         switch (reqCode) {
-        case REQCODE_ENABLE_BT:
-            if (resCode == Activity.RESULT_OK)
-                setupBT1();
-            else {
-                Toast.makeText(this, R.string.toast_bluetooth_disabled,
-                        Toast.LENGTH_SHORT).show();
-                finish();
-            }
-            break;
-        case REQCODE_GET_DEVICE:
-            if (resCode == Activity.RESULT_OK)
-                connect1((BluetoothDevice) data.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE));
-            else
-                setState(State.Disconnected);
-            break;
-        case REQCODE_DISCOVERABLE:
-            if (resCode != Activity.RESULT_CANCELED)
-                startServer1();
-            else
-                setState(State.Disconnected);
+            case REQCODE_ENABLE_BT:
+                if (resCode == Activity.RESULT_OK)
+                    setupBT1();
+                else {
+                    Toast.makeText(this, R.string.toast_bluetooth_disabled,
+                            Toast.LENGTH_SHORT).show();
+                    finish();
+                }
+                break;
+            case REQCODE_GET_DEVICE:
+                if (resCode == Activity.RESULT_OK)
+                    connect1((BluetoothDevice) data.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE));
+                else
+                    setState(State.Disconnected);
+                break;
+            case REQCODE_DISCOVERABLE:
+                if (resCode != Activity.RESULT_CANCELED)
+                    startServer1();
+                else
+                    setState(State.Disconnected);
+        }
+    }
+
+    public void onClickRingButton(View v){
+        Log.d(TAG, "onClickRingButton");
+        if (commThread != null) {
+            message_seq++;
+            long time = System.currentTimeMillis();
+            ChatMessage message = new ChatMessage(message_seq, time, "RING", devName);
+            commThread.send(message);
+            chatLogAdapter.add(message);
+            chatLogAdapter.notifyDataSetChanged();
+            chatLogView.smoothScrollToPosition(chatLog.size());
         }
     }
 
@@ -635,18 +652,18 @@ public class MainActivity extends AppCompatActivity {
             MainActivity activity = activityRef.get();
             if (activity == null) return;
             switch (msg.what) {
-            case MESG_STARTED:
-                BluetoothDevice device = (BluetoothDevice) msg.obj;
-                activity.setState(State.Connected, device.getName());
-                break;
-            case MESG_FINISHED:
-                Toast.makeText(activity, R.string.toast_connection_closed,
-                        Toast.LENGTH_SHORT).show();
-                activity.setState(State.Disconnected);
-                break;
-            case MESG_RECEIVED:
-                activity.showMessage((ChatMessage) msg.obj);
-                break;
+                case MESG_STARTED:
+                    BluetoothDevice device = (BluetoothDevice) msg.obj;
+                    activity.setState(State.Connected, device.getName());
+                    break;
+                case MESG_FINISHED:
+                    Toast.makeText(activity, R.string.toast_connection_closed,
+                            Toast.LENGTH_SHORT).show();
+                    activity.setState(State.Disconnected);
+                    break;
+                case MESG_RECEIVED:
+                    activity.showMessage((ChatMessage) msg.obj);
+                    break;
             }
         }
     }
@@ -660,37 +677,45 @@ public class MainActivity extends AppCompatActivity {
     private void setState(State state, String arg) {
         this.state = state;
         switch (state) {
-        case Initializing:
-            statusText.setText(R.string.conn_status_text_disconnected);
-            inputText.setEnabled(false);
-            sendButton.setEnabled(false);
-            break;
-        case Disconnected:
-            statusText.setText(R.string.conn_status_text_disconnected);
-            inputText.setEnabled(false);
-            sendButton.setEnabled(false);
-            break;
-        case Connecting:
-            statusText.setText(getString(R.string.conn_status_text_connecting_to, arg));
-            inputText.setEnabled(false);
-            sendButton.setEnabled(false);
-            break;
-        case Connected:
-            statusText.setText(getString(R.string.conn_status_text_connected_to, arg));
-            inputText.setEnabled(true);
-            sendButton.setEnabled(true);
-            soundPool.play(sound_connected, 1.0f, 1.0f, 0, 0, 1);
-            break;
-        case Waiting:
-            statusText.setText(R.string.conn_status_text_waiting_for_connection);
-            inputText.setEnabled(false);
-            sendButton.setEnabled(false);
-            break;
+            case Initializing:
+                statusText.setText(R.string.conn_status_text_disconnected);
+                inputText.setEnabled(false);
+                sendButton.setEnabled(false);
+                ringButton.setEnabled(false);
+                break;
+            case Disconnected:
+                statusText.setText(R.string.conn_status_text_disconnected);
+                inputText.setEnabled(false);
+                sendButton.setEnabled(false);
+                ringButton.setEnabled(false);
+                break;
+            case Connecting:
+                statusText.setText(getString(R.string.conn_status_text_connecting_to, arg));
+                inputText.setEnabled(false);
+                sendButton.setEnabled(false);
+                ringButton.setEnabled(false);
+                break;
+            case Connected:
+                statusText.setText(getString(R.string.conn_status_text_connected_to, arg));
+                inputText.setEnabled(true);
+                sendButton.setEnabled(true);
+                ringButton.setEnabled(true);
+                soundPool.play(sound_connected, 1.0f, 1.0f, 0, 0, 1);
+                break;
+            case Waiting:
+                statusText.setText(R.string.conn_status_text_waiting_for_connection);
+                inputText.setEnabled(false);
+                sendButton.setEnabled(false);
+                ringButton.setEnabled(false);
+                break;
         }
         invalidateOptionsMenu();
     }
 
     private void showMessage(ChatMessage message) {
+        if(message.content.equals("RING")){
+            soundPool.play(sound_rings, 1.0f, 1.0f, 0, 0, 1);
+        }
         chatLogAdapter.add(message);
         chatLogAdapter.notifyDataSetChanged();
         chatLogView.smoothScrollToPosition(chatLogAdapter.getCount());

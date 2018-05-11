@@ -5,7 +5,7 @@
     <string name="conn_status_text_connecting_to">Connecting to %s</string>
     <string name="conn_status_text_connected_to">Connected to %s</string>
     <string name="conn_status_text_waiting_for_connection">Listening for incoming connection</string>
-
+    <string name="ring_button_label">Ring</string>
     <string name="send_button_label">Send</string>
     <string name="input_text_hint">Message</string>
 
